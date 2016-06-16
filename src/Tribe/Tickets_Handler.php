@@ -512,7 +512,12 @@ class Tribe__Tickets__Tickets_Handler {
 		$tickets = Tribe__Tickets__Tickets::get_event_tickets( $post->ID );
 		$global_stock = new Tribe__Tickets__Global_Stock( $post->ID );
 
-		include $this->path . 'src/admin-views/meta-box.php';
+
+		if ( class_exists( 'Tribe__Tickets_Plus__Main' ) ) {
+			include $this->path . 'src/admin-views/meta-box.php';
+		} else {
+			include $this->path . 'src/admin-views/meta-box-legacy.php';
+		}
 	}
 
 	/**
