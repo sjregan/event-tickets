@@ -24,7 +24,7 @@ if ( $must_login ):
 	<div class="tribe-rsvp-message tribe-events-tickets-change-rsvp">
 		
 	<?php
-		if ( isset( $rsvp_status ) ):
+		if ( isset( $rsvp_status ) && $rsvp_status != false ):
 			if ( $rsvp_status == 'yes' ) {
 				$message = _x( 'You indicated you will be attending this event.', 'event-tickets' );
 			} else {
