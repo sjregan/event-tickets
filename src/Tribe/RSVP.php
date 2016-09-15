@@ -9,6 +9,20 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 	const ATTENDEE_OBJECT   = 'tribe_rsvp_attendees';
 
 	/**
+	 * Meta key for whether RSVPing is enabled
+	 *
+	 * @var string
+	 */
+	const ENABLED_KEY = '_tribe_enable_rsvp';
+	
+	/**
+	 * Meta key for whether RSVPing is enabled
+	 *
+	 * @var string
+	 */
+	const QUESTION_KEY = '_tribe_rsvp_question';
+	
+	/**
 	 * Meta key that relates Attendees and Events.
 	 *
 	 * @var string
@@ -211,7 +225,7 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 		);
 
 		$js_url = $main->plugin_url . 'src/resources/js/rsvp.js';
-		$js_url = Tribe__Template_Factory::getMinFile( $js_url, true );
+		//$js_url = Tribe__Template_Factory::getMinFile( $js_url, true );
 		$js_url = apply_filters( 'tribe_tickets_rsvp_js_url', $js_url );
 
 		wp_register_script(
@@ -403,11 +417,12 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 	 * Generate and store all the attendees information for a new order.
 	 */
 	public function generate_tickets( ) {
-		if ( empty( $_POST['tickets_process'] ) || empty( $_POST['attendee'] ) || empty( $_POST['product_id'] ) ) {
+		if ( empty( $_POST['event_id'] ) || empty( $_POST['tickets_process'] ) || empty( $_POST['attending'] ) ) {
 			return;
 		}
 
-		$has_tickets = $event_id = false;
+		$event_id = intval($_POST['event_id']);
+		$current_user = wp_get_current_user();
 
 		/**
 		* RSVP specific action fired just before a RSVP-driven attendee tickets for an order are generated
@@ -417,142 +432,61 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 		do_action( 'tribe_tickets_rsvp_before_order_processing', $_POST );
 
 		$order_id = md5( time() . rand() );
+		
+		$attendee_email = $current_user->user_email;
+		$attendee_full_name = $current_user->display_name;
+		$order_status = $_POST['attending'] == 'yes' ? 'yes' : 'no';
+		$custom_answer = !empty($_POST['custom_question']) ? $_POST['custom_question'] : '';
+		
+		$attendee = $this->get_user_rsvp( get_current_user_id(), $event_id );
+		
+		if ( $attendee === false ) {
+			// Create new RSVP
+			$attendee = array(
+				'post_status' => 'publish',
+				'post_title'  => $attendee_full_name,
+				'post_type'   => self::ATTENDEE_OBJECT,
+				'ping_status' => 'closed',
+			);
 
-		$attendee_email = empty( $_POST['attendee']['email'] ) ? null : sanitize_email( $_POST['attendee']['email'] );
-		$attendee_email = is_email( $attendee_email ) ? $attendee_email : null;
-		$attendee_full_name = empty( $_POST['attendee']['full_name'] ) ? null : sanitize_text_field( $_POST['attendee']['full_name'] );
-		$attendee_optout = empty( $_POST['attendee']['optout'] ) ? false : (bool) $_POST['attendee']['optout'];
+			// Insert individual ticket purchased
+			$attendee_id = wp_insert_post( $attendee );
 
-		if ( empty( $_POST['attendee']['order_status'] ) || ! Tribe__Tickets__Tickets_View::instance()->is_valid_rsvp_option( $_POST['attendee']['order_status'] ) ) {
-			$attendee_order_status = 'yes';
+			$attendees = (int) get_post_meta( $event_id, 'total_attendees', true );
+			update_post_meta( $event_id, 'total_attendees', ++ $attendees );
+
+			update_post_meta( $attendee_id, self::ATTENDEE_EVENT_KEY, $event_id );
+			update_post_meta( $attendee_id, self::ATTENDEE_RSVP_KEY, $order_status );
+			update_post_meta( $attendee_id, $this->order_key, $order_id );
+			update_post_meta( $attendee_id, $this->full_name, $attendee_full_name );
+			update_post_meta( $attendee_id, $this->email, $attendee_email );
+			
+			if ( $order_status == 'yes' ) {
+				update_post_meta( $attendee_id, self::QUESTION_KEY, $custom_answer );
+			}
+
+			$this->record_attendee_user_id( $attendee_id );
 		} else {
-			$attendee_order_status = $_POST['attendee']['order_status'];
+			$time = current_time('mysql');
+			
+			wp_update_post(array(
+				'ID'			=> $attendee->ID,
+				'post_date'     => $time,
+				'post_date_gmt' => get_gmt_from_date( $time )
+			));
+			
+			update_post_meta( $attendee->ID, self::ATTENDEE_RSVP_KEY, $order_status );
+			
+			if ( $order_status == 'yes' ) {
+				update_post_meta( $attendee->ID, self::QUESTION_KEY, $custom_answer );
+			} else {
+				delete_post_meta( $attendee->ID, self::QUESTION_KEY );
+			}
 		}
 
-		if ( ! $attendee_email || ! $attendee_full_name ) {
-			$url = get_permalink( $event_id );
-			$url = add_query_arg( 'rsvp_error', 1, $url );
-			wp_redirect( esc_url_raw( $url ) );
-			die;
-		}
-
-		// Iterate over each product
-		foreach ( (array) $_POST['product_id'] as $product_id ) {
-			$order_attendee_id = 0;
-
-			// Get the event this tickets is for
-			$event_id = get_post_meta( $product_id, $this->event_key, true );
-
-			if ( empty( $event_id ) ) {
-				continue;
-			}
-
-			$ticket_type = $this->get_ticket( $event_id, $product_id );
-
-			// if there were no RSVP tickets for the product added to the cart, continue
-			if ( empty( $_POST[ "quantity_{$product_id}" ] ) ) {
-				continue;
-			}
-
-			$qty = max( intval( $_POST[ "quantity_{$product_id}" ] ), 0 );
-
-			// Throw an error if Qty is bigger then Remaining
-			if ( $ticket_type->managing_stock() && $qty > $ticket_type->remaining() ) {
-				$url = add_query_arg( 'rsvp_error', 2, get_permalink( $event_id ) );
-				wp_redirect( esc_url_raw( $url ) );
-				die;
-			}
-
-			$has_tickets = true;
-
-			/**
-			* RSVP specific action fired just before a RSVP-driven attendee ticket for an event is generated
-			*
-			* @param $event_id ID of event
-			* @param $ticket_type Ticket Type object for the product
-			* @param $data post Parameters comes from RSVP Form
-			*/
-			do_action( 'tribe_tickets_rsvp_before_attendee_ticket_creation', $event_id, $ticket_type, $_POST );
-
-			// Iterate over all the amount of tickets purchased (for this product)
-			for ( $i = 0; $i < $qty; $i ++ ) {
-
-				$attendee = array(
-					'post_status' => 'publish',
-					'post_title'  => $attendee_full_name . ' | ' . ( $i + 1 ),
-					'post_type'   => self::ATTENDEE_OBJECT,
-					'ping_status' => 'closed',
-				);
-
-				// Insert individual ticket purchased
-				$attendee_id = wp_insert_post( $attendee );
-
-				$sales = (int) get_post_meta( $product_id, 'total_sales', true );
-				update_post_meta( $product_id, 'total_sales', ++ $sales );
-
-				update_post_meta( $attendee_id, self::ATTENDEE_PRODUCT_KEY, $product_id );
-				update_post_meta( $attendee_id, self::ATTENDEE_EVENT_KEY, $event_id );
-				update_post_meta( $attendee_id, self::ATTENDEE_RSVP_KEY, $attendee_order_status );
-				update_post_meta( $attendee_id, $this->security_code, $this->generate_security_code( $attendee_id ) );
-				update_post_meta( $attendee_id, $this->order_key, $order_id );
-				update_post_meta( $attendee_id, self::ATTENDEE_OPTOUT_KEY, (bool) $attendee_optout );
-				update_post_meta( $attendee_id, $this->full_name, $attendee_full_name );
-				update_post_meta( $attendee_id, $this->email, $attendee_email );
-
-				/**
-				 * RSVP specific action fired when a RSVP-driven attendee ticket for an event is generated
-				 *
-				 * @param $attendee_id ID of attendee ticket
-				 * @param $event_id ID of event
-				 * @param $order_id RSVP order ID
-				 * @param $product_id RSVP product ID
-				 */
-				do_action( 'event_tickets_rsvp_attendee_created', $attendee_id, $event_id, $order_id );
-
-				/**
-				 * Action fired when an RSVP attendee ticket is created
-				 *
-				 * @param $attendee_id ID of the attendee post
-				 * @param $event_id Event post ID
-				 * @param $product_id RSVP ticket post ID
-				 * @param $order_attendee_id Attendee # for order
-				 */
-				do_action( 'event_tickets_rsvp_ticket_created', $attendee_id, $event_id, $product_id, $order_attendee_id );
-
-				$this->record_attendee_user_id( $attendee_id );
-				$order_attendee_id++;
-			}
-
-			/**
-			 * Action fired when an RSVP has had attendee tickets generated for it
-			 *
-			 * @param $product_id RSVP ticket post ID
-			 * @param $order_id ID of the RSVP order
-			 * @param $qty Quantity ordered
-			 */
-			do_action( 'event_tickets_rsvp_tickets_generated_for_product', $product_id, $order_id, $qty );
-
-
-			// After Adding the Values we Update the Transient
-			Tribe__Post_Transient::instance()->delete( $event_id, Tribe__Tickets__Tickets::ATTENDEES_CACHE );
-		}
-
-		/**
-		 * Fires when an RSVP attendee tickets have been generated.
-		 *
-		 * @param int    $order_id ID of the RSVP order
-		 * @param int    $event_id ID of the event the order was placed for
-		 * @param string $attendee_order_status 'yes' if the user indicated they will attend
-		 */
-		do_action( 'event_tickets_rsvp_tickets_generated', $order_id, $event_id, $attendee_order_status );
-
-		// No point sending tickets if their current intention is not to attend
-		if ( $has_tickets && 'yes' === $attendee_order_status ) {
-			$this->send_tickets_email( $order_id ) ;
-		} elseif ( $has_tickets ) {
-			$this->send_non_attendance_confirmation( $order_id, $event_id );
-		}
-
+		// After Adding the Values we Update the Transient
+		Tribe__Post_Transient::instance()->delete( $event_id, Tribe__Tickets__Tickets::ATTENDEES_CACHE );
+			
 		// Redirect to the same page to prevent double purchase on refresh
 		if ( ! empty( $event_id ) ) {
 			$url = get_permalink( $event_id );
@@ -562,6 +496,38 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 		}
 	}
 
+	/**
+	 * Get rsvp for a user
+	 * 
+	 * @param int $user_id
+	 * @param int $event_id
+	 * @return WP_User|boolean
+	 */
+	public function get_user_rsvp ( $user_id, $event_id ) {
+		$query = new WP_Query( array(
+			'post_type'      => self::ATTENDEE_OBJECT,
+			'meta_query' => array(
+				'relation' => 'AND',
+				array(
+					'key' => self::ATTENDEE_EVENT_KEY,
+					'value' => $event_id,
+					'compare' => '='
+				),
+				array(
+					'key' => self::ATTENDEE_USER_ID,
+					'value' => $user_id,
+					'compare' => '='
+				)
+			),
+		) );
+		
+		if ( !empty( $query->posts[0] ) ) {
+			return $query->posts[0];
+		}
+		
+		return false;
+	}
+	
 	public function send_tickets_email( $order_id ) {
 		$all_attendees = $this->get_attendees_by_transaction( $order_id );
 		$to_send = array();
@@ -872,19 +838,22 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 			$post = get_post( $post->post_parent );
 		}
 
-		$tickets = $this->get_tickets( $post->ID );
-
-		if ( empty( $tickets ) ) {
+		$rsvp_enabled = get_post_meta( $post->ID, self::ENABLED_KEY, true);
+		$rsvp_question = get_post_meta( $post->ID, self::QUESTION_KEY, true);
+		
+		if (!$rsvp_enabled) {
 			return;
 		}
 
 		$rsvp_sent = empty( $_GET['rsvp_sent'] ) ? false : true;
 		$rsvp_error = empty( $_GET['rsvp_error'] ) ? false : intval( $_GET['rsvp_error'] );
 
+		/*
 		if ( $rsvp_sent ) {
-			$this->add_message( __( 'Your RSVP has been received! Check your email for your RSVP confirmation.', 'event-tickets' ), 'success' );
+			$this->add_message( __( 'Thanks for your RSVP!', 'event-tickets' ), 'success' );
 		}
-
+		*/
+		
 		if ( $rsvp_error ) {
 			switch ( $rsvp_error ) {
 				case 2:
@@ -898,8 +867,17 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 			}
 		}
 
+		$attendee = $this->get_user_rsvp( get_current_user_id(), $post->ID );
+		$rsvp_status = '';
+		$rsvp_answer = '';
+		
+		if ( $attendee ) {
+			$rsvp_status = get_post_meta( $attendee->ID, self::ATTENDEE_RSVP_KEY, true );
+			$rsvp_answer = get_post_meta( $attendee->ID, self::QUESTION_KEY, true);
+		}
+		
 		$must_login = ! is_user_logged_in() && $this->login_required();
-		include $this->getTemplateHierarchy( 'tickets/rsvp' );
+		include $this->getTemplateHierarchy( 'tickets/simple-rsvp' );
 
 		// It's only done when it's included
 		$this->is_frontend_tickets_form_done = true;
@@ -1018,35 +996,21 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 		$attendees = array();
 
 		foreach ( $attendees_query->posts as $attendee ) {
-			$checkin      = get_post_meta( $attendee->ID, $this->checkin_key, true );
-			$security     = get_post_meta( $attendee->ID, $this->security_code, true );
-			$product_id   = get_post_meta( $attendee->ID, self::ATTENDEE_PRODUCT_KEY, true );
-			$optout       = (bool) get_post_meta( $attendee->ID, self::ATTENDEE_OPTOUT_KEY, true );
 			$status       = get_post_meta( $attendee->ID, self::ATTENDEE_RSVP_KEY, true );
-			$status_label = Tribe__Tickets__Tickets_View::instance()->get_rsvp_options( $status );
 			$user_id      = get_post_meta( $attendee->ID, self::ATTENDEE_USER_ID, true );
-			$ticket_sent  = (bool) get_post_meta( $attendee->ID, self::ATTENDEE_TICKET_SENT, true );
-
-			if ( empty( $product_id ) ) {
-				continue;
-			}
-
-			$product       = get_post( $product_id );
-			$product_title = ( ! empty( $product ) ) ? $product->post_title : get_post_meta( $attendee->ID, $this->deleted_product, true ) . ' ' . __( '(deleted)', 'event-tickets' );
-
+			$user_email      = get_post_meta( $attendee->ID, $this->email, true );
+			$user_full_name  = get_post_meta( $attendee->ID, $this->full_name, true );
+			$question_answer = get_post_meta( $attendee->ID, self::QUESTION_KEY, true);
+			
 			$attendee_data = array_merge(
 				$this->get_order_data( $attendee->ID ),
 				array(
-					'optout'             => $optout,
-					'ticket'             => $product_title,
 					'attendee_id'        => $attendee->ID,
-					'security'           => $security,
-					'product_id'         => $product_id,
-					'check_in'           => $checkin,
-					'order_status'       => $status,
-					'order_status_label' => $status_label,
+					'order_status'       => $status == 'yes' ? 'Yes' : 'No',
 					'user_id'            => $user_id,
-					'ticket_sent'        => $ticket_sent,
+					'user_email'		=> $user_email,
+					'user_full_name'	=> $user_full_name,
+					'custom'			=> $question_answer,
 				)
 			);
 

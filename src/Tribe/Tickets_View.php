@@ -52,8 +52,8 @@ class Tribe__Tickets__Tickets_View {
 		add_filter( 'tribe_events_template', array( $myself, 'intercept_template' ), 20, 2 );
 
 		// We will inject on the Priority 4, to be happen before RSVP
-		add_action( 'tribe_events_single_event_after_the_meta', array( $myself, 'inject_link_template' ), 4 );
-		add_filter( 'the_content', array( $myself, 'inject_link_template_the_content' ), 9 );
+		//add_action( 'tribe_events_single_event_after_the_meta', array( $myself, 'inject_link_template' ), 4 );
+		//add_filter( 'the_content', array( $myself, 'inject_link_template_the_content' ), 9 );
 
 		return $myself;
 	}

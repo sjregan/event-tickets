@@ -28,7 +28,7 @@ class Tribe__Tickets__Metabox {
 
 		add_meta_box(
 			'tribetickets',
-			esc_html__( 'Tickets', 'event-tickets' ),
+			esc_html__( 'RSVP', 'event-tickets' ),
 			array(
 				'Tribe__Tickets__Metabox',
 				'do_modules_metaboxes',
@@ -54,7 +54,8 @@ class Tribe__Tickets__Metabox {
 		}
 
 		add_thickbox();
-		Tribe__Tickets__Tickets_Handler::instance()->do_meta_box( $post_id );
+		//Tribe__Tickets__Tickets_Handler::instance()->do_meta_box( $post_id );
+		Tribe__Tickets__Tickets_Handler::instance()->do_simple_meta_box( $post_id );
 	}
 
 	/**

@@ -93,6 +93,15 @@ p.ticket_name {
 	table-layout: fixed;
 }
 
+.tribe-tickets-rsvp-question INPUT {
+	width: 100%;
+}
+
+.tribe-tickets-enable-simple-rsvp TD {
+	border-bottom: 1px dotted #ccc;
+	padding-bottom: 0.5em !important;
+}
+
 /* Specific goal of this rule is to prevent the number input busting the ticket form layout under Twenty Fifteen */
 
 .tribe-theme-twentyfifteen .tribe-events-tickets input[type='number'] {

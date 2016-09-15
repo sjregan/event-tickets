@@ -55,18 +55,7 @@ $tickets = Tribe__Tickets__Tickets::get_event_tickets( $event_id );
 					<?php do_action( 'tribe_events_tickets_attendees_event_details_bottom', $event_id ); ?>
 				</div>
 				<div class="welcome-panel-column welcome-panel-middle">
-					<h4 class="tickets-summary"><?php echo esc_html_x( 'Tickets', 'attendee screen summary', 'event-tickets' ); ?></h4>
-					<?php do_action( 'tribe_events_tickets_attendees_ticket_sales_top', $event_id ); ?>
-
-					<ul>
-					<?php foreach ( $tickets as $ticket ) { ?>
-						<li>
-							<strong><?php echo esc_html( $ticket->name ) ?>: </strong>
-							<?php echo tribe_tickets_get_ticket_stock_message( $ticket ); ?>
-						</li>
-					<?php } ?>
-					</ul>
-					<?php do_action( 'tribe_events_tickets_attendees_ticket_sales_bottom', $event_id );  ?>
+					
 				</div>
 				<div class="welcome-panel-column welcome-panel-last alternate">
 					<?php

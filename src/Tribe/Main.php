@@ -9,12 +9,12 @@ class Tribe__Tickets__Main {
 	/**
 	 * Current version of this plugin
 	 */
-	const VERSION = '4.3rc2';
+	const VERSION = '4.3zlf1';
 
 	/**
 	 * Min required The Events Calendar version
 	 */
-	const MIN_TEC_VERSION = '4.3rc2';
+	const MIN_TEC_VERSION = '4.2.6';
 
 	/**
 	 * Name of the provider
@@ -184,6 +184,9 @@ class Tribe__Tickets__Main {
 	}
 
 	public function maybe_set_common_lib_info() {
+		// This throws a bunch of errors
+		return;
+		
 		$common_version = file_get_contents( $this->plugin_path . 'common/src/Tribe/Main.php' );
 
 		// if there isn't a tribe-common version, bail

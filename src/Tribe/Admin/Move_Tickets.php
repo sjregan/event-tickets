@@ -222,7 +222,7 @@ class Tribe__Tickets__Admin__Move_Tickets {
 	 * @return array
 	 */
 	public function bulk_actions( array $actions ) {
-		$actions[ 'move' ] = _x( 'Move', 'attendee screen bulk actions', 'event-tickets' );
+		//$actions[ 'move' ] = _x( 'Move', 'attendee screen bulk actions', 'event-tickets' );
 		return $actions;
 	}
 

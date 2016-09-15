@@ -21,6 +21,18 @@ class Tribe__Tickets__Tickets_Handler {
 	protected $image_header_field = '_tribe_ticket_header';
 
 	/**
+	 * Post Meta key for the rsvp question
+	 * @var string
+	 */
+	protected $rsvp_question_field = '_tribe_rsvp_question';
+	
+	/**
+	 * Post Meta key for enabling rsvp
+	 * @var string
+	 */
+	protected $enable_rsvp_field = '_tribe_enable_rsvp';
+	
+	/**
 	 * Slug of the admin page for attendees
 	 * @var string
 	 */
@@ -45,8 +57,10 @@ class Tribe__Tickets__Tickets_Handler {
 		$main = Tribe__Tickets__Main::instance();
 
 		foreach ( $main->post_types() as $post_type ) {
-			add_action( 'save_post_' . $post_type, array( $this, 'save_image_header' ) );
-			add_action( 'save_post_' . $post_type, array( $this, 'save_global_stock' ) );
+//			add_action( 'save_post_' . $post_type, array( $this, 'save_image_header' ) );
+//			add_action( 'save_post_' . $post_type, array( $this, 'save_global_stock' ) );
+			add_action( 'save_post_' . $post_type, array( $this, 'save_rsvp_question' ) );
+			add_action( 'save_post_' . $post_type, array( $this, 'save_enable_rsvp' ) );
 		}
 
 		add_action( 'admin_menu', array( $this, 'attendees_page_register' ) );
@@ -109,16 +123,15 @@ class Tribe__Tickets__Tickets_Handler {
 	 */
 	public function attendees_row_action( $actions ) {
 		global $post;
-		$tickets = Tribe__Tickets__Tickets::get_event_tickets( $post->ID );
 
-		if ( in_array( $post->post_type, Tribe__Tickets__Main::instance()->post_types() ) && ! empty( $tickets ) ) {
+		if ( in_array( $post->post_type, Tribe__Tickets__Main::instance()->post_types() ) ) {
 			$url = add_query_arg( array(
 				'post_type' => $post->post_type,
 				'page'      => self::$attendees_slug,
 				'event_id'  => $post->ID,
 			), admin_url( 'edit.php' ) );
 
-			$actions['tickets_attendees'] = sprintf( '<a title="%s" href="%s">%s</a>', esc_html__( 'See who purchased tickets to this event', 'event-tickets' ), esc_url( $url ), esc_html__( 'Attendees', 'event-tickets' ) );
+			$actions['tickets_attendees'] = sprintf( '<a title="%s" href="%s">%s</a>', esc_html__( "See who RSVP'd to this event", 'event-tickets' ), esc_url( $url ), esc_html__( 'Attendees', 'event-tickets' ) );
 		}
 
 		return $actions;
@@ -613,6 +626,18 @@ class Tribe__Tickets__Tickets_Handler {
 
 		include $this->path . 'src/admin-views/meta-box.php';
 	}
+	
+	/**
+	 * Includes the simple RSVP metabox inside the Event edit screen
+	 *
+	 * @param WP_Post $post
+	 */
+	public function do_simple_meta_box( $post ) {
+		//$tickets = Tribe__Tickets__Tickets::get_event_tickets( $post->ID );
+		//$global_stock = new Tribe__Tickets__Global_Stock( $post->ID );
+
+		include $this->path . 'src/admin-views/simple-meta-box.php';
+	}
 
 	/**
 	 * Echoes the markup for the tickets list in the tickets metabox
@@ -672,6 +697,54 @@ class Tribe__Tickets__Tickets_Handler {
 			delete_post_meta( $post_id, $this->image_header_field );
 		} else {
 			update_post_meta( $post_id, $this->image_header_field, $_POST['tribe_ticket_header_image_id'] );
+		}
+
+		return;
+	}
+	
+	/**
+	 * Save or delete the RSVP question
+	 *
+	 * @param int $post_id
+	 */
+	public function save_rsvp_question( $post_id ) {
+		if ( ! ( isset($_POST[ 'tribe-tickets-post-settings' ])  && wp_verify_nonce( $_POST[ 'tribe-tickets-post-settings' ], 'tribe-tickets-simple-meta-box' ) ) ) {
+			return;
+		}
+
+		// don't do anything on autosave or auto-draft either or massupdates
+		if ( wp_is_post_autosave( $post_id ) || wp_is_post_revision( $post_id ) ) {
+			return;
+		}
+
+		if ( empty( $_POST['tribe_ticket_rsvp_question'] ) ) {
+			delete_post_meta( $post_id, $this->rsvp_question_field );
+		} else {
+			update_post_meta( $post_id, $this->rsvp_question_field, $_POST['tribe_ticket_rsvp_question'] );
+		}
+
+		return;
+	}
+	
+	/**
+	 * Save or delete whether RSVP is enabled
+	 *
+	 * @param int $post_id
+	 */
+	public function save_enable_rsvp( $post_id ) {
+		if ( ! ( isset($_POST[ 'tribe-tickets-post-settings' ])  && wp_verify_nonce( $_POST[ 'tribe-tickets-post-settings' ], 'tribe-tickets-simple-meta-box' ) ) ) {
+			return;
+		}
+
+		// don't do anything on autosave or auto-draft either or massupdates
+		if ( wp_is_post_autosave( $post_id ) || wp_is_post_revision( $post_id ) ) {
+			return;
+		}
+
+		if ( empty( $_POST['tribe_ticket_enable_rsvp'] ) ) {
+			delete_post_meta( $post_id, $this->enable_rsvp_field );
+		} else {
+			update_post_meta( $post_id, $this->enable_rsvp_field, $_POST['tribe_ticket_enable_rsvp'] );
 		}
 
 		return;

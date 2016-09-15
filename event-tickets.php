@@ -1,10 +1,10 @@
 <?php
 /*
-Plugin Name: Event Tickets
-Description: Event Tickets allows your guests to RSVP from any post, page, or event.
-Version: 4.3rc2
-Author: Modern Tribe, Inc.
-Author URI: http://m.tri.be/28
+Plugin Name: Zipline's Simple Event RSVP
+Description: Allows your guests to RSVP from any post, page, or event.
+Version: 4.3zlf1
+Author: Zipline
+Author URI: https://wearezipline.com
 License: GPLv2 or later
 Text Domain: event-tickets
 Domain Path: /lang/

@@ -22,8 +22,8 @@ class Tribe__Tickets__RSVP__Attendance_Totals extends Tribe__Tickets__Abstract_A
 	protected function calculate_totals() {
 		foreach ( Tribe__Tickets__RSVP::get_instance()->get_attendees_array( $this->event_id ) as $attendee ) {
 			switch( $attendee[ 'order_status' ] ) {
-				case 'yes': $this->total_going++; break;
-				case 'no': $this->total_not_going++; break;
+				case 1: $this->total_going++; break;
+				case 0: $this->total_not_going++; break;
 			}
 		}
 

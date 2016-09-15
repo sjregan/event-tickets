@@ -76,13 +76,31 @@ class Tribe__Tickets__Attendees_Table extends WP_List_Table {
 	public function get_columns() {
 		$columns = array(
 			'cb'        => '<input type="checkbox" />',
-			'ticket'    => esc_html_x( 'Ticket', 'attendee table', 'event-tickets' ),
-			'purchaser' => esc_html_x( 'Purchaser', 'attendee table', 'event-tickets' ),
-			'status'    => esc_html_x( 'Status', 'attendee table', 'event-tickets' ),
-			'security'  => esc_html__( 'Security Code', 'event-tickets' ),
-			'check_in'  => esc_html__( 'Check in', 'event-tickets' ),
+			'purchaser_name' => esc_html_x( 'Name', 'attendee table', 'event-tickets' ),
+			'purchaser_email' => esc_html_x( 'Email', 'attendee table', 'event-tickets' ),
+			'order_status' => esc_html_x( 'Attending', 'attendee table', 'event-tickets' ),
+			'purchase_time' => esc_html_x( 'Indicated', 'attendee table', 'event-tickets' ),
+			
+			//'ticket'    => esc_html_x( 'Ticket', 'attendee table', 'event-tickets' ),
+			//'status'    => esc_html_x( 'Status', 'attendee table', 'event-tickets' ),
+			//'security'  => esc_html__( 'Security Code', 'event-tickets' ),
+			//'check_in'  => esc_html__( 'Check in', 'event-tickets' ),
 		);
 
+		$event_id = !empty($_GET['event_id']) ? intval($_GET['event_id']) : false;
+		
+		if ($event_id) {
+			$question = get_post_meta( $event_id, Tribe__Tickets__RSVP::QUESTION_KEY, true);
+			
+			if ( strlen( $question ) > 200 ) {
+				$question = substr($question, 0, 5).'...';
+			}
+			
+			if ($question) {
+				$columns['custom'] = esc_html($question);
+			}
+		}
+		
 		return $columns;
 	}
 
@@ -264,6 +282,7 @@ class Tribe__Tickets__Attendees_Table extends WP_List_Table {
 		$attendee = esc_attr( $item['attendee_id'] . '|' . $item['provider'] );
 		$nonce = wp_create_nonce( 'do_item_action_' . $attendee );
 
+		/*
 		$check_in_out_url = esc_url( add_query_arg( array(
 			'action'   => $item[ 'check_in' ] ? 'uncheck_in' : 'check_in',
 			'nonce'    => $nonce,
@@ -273,7 +292,8 @@ class Tribe__Tickets__Attendees_Table extends WP_List_Table {
 		$check_in_out_text = $item[ 'check_in' ]
 			? esc_html_x( 'Undo Check In', 'row action', 'event-tickets' )
 			: esc_html_x( 'Check In', 'row action', 'event-tickets' );
-
+		*/
+		
 		$delete_url = esc_url( add_query_arg( array(
 			'action'   => 'delete_attendee',
 			'nonce'    => $nonce,
@@ -281,11 +301,11 @@ class Tribe__Tickets__Attendees_Table extends WP_List_Table {
 		) ) );
 
 		$default_actions = array(
-			'<span class="inline"> <a href="' . $check_in_out_url . '">' . $check_in_out_text . '</a> </span>',
+			//'<span class="inline"> <a href="' . $check_in_out_url . '">' . $check_in_out_text . '</a> </span>',
 		);
 
 		if ( is_admin() ) {
-			$default_actions[] = '<span class="inline move-ticket"> <a href="#">' . esc_html_x( 'Move', 'row action', 'event-tickets' ) . '</a> </span>';
+			//$default_actions[] = '<span class="inline move-ticket"> <a href="#">' . esc_html_x( 'Move', 'row action', 'event-tickets' ) . '</a> </span>';
 		}
 
 		$default_actions[] = '<span class="trash"><a href="' . $delete_url . '">' . esc_html_x( 'Delete', 'row action', 'event-tickets' ) . '</a></span>';
@@ -444,7 +464,7 @@ class Tribe__Tickets__Attendees_Table extends WP_List_Table {
 		);
 
 		if ( 'top' == $which ) {
-			$nav['right']['filter_box'] = sprintf( '%s: <input type="text" name="filter_attendee" id="filter_attendee" value="">', esc_html__( 'Filter by purchaser name, ticket #, order # or security code', 'event-tickets' ) );
+			//$nav['right']['filter_box'] = sprintf( '%s: <input type="text" name="filter_attendee" id="filter_attendee" value="">', esc_html__( 'Filter by name', 'event-tickets' ) );
 		}
 
 		$nav = apply_filters( 'tribe_events_tickets_attendees_table_nav', $nav, $which );
@@ -463,8 +483,8 @@ class Tribe__Tickets__Attendees_Table extends WP_List_Table {
 	 */
 	public function get_bulk_actions() {
 		$actions = array(
-			'check_in'        => esc_attr__( 'Check in', 'event-tickets' ),
-			'uncheck_in'      => esc_attr__( 'Undo Check in', 'event-tickets' ),
+			//'check_in'        => esc_attr__( 'Check in', 'event-tickets' ),
+			//'uncheck_in'      => esc_attr__( 'Undo Check in', 'event-tickets' ),
 			'delete_attendee' => esc_attr__( 'Delete', 'event-tickets' ),
 		);
 
@@ -657,7 +677,6 @@ class Tribe__Tickets__Attendees_Table extends WP_List_Table {
 		$event_id = isset( $_GET['event_id'] ) ? $_GET['event_id'] : 0;
 
 		$items = Tribe__Tickets__Tickets::get_event_attendees( $event_id );
-
 
 		$this->items = $items;
 		$total_items = count( $this->items );
