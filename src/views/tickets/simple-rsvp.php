@@ -26,18 +26,24 @@ if ( $must_login ):
 	<?php
 		if ( isset( $rsvp_status ) && $rsvp_status != false ):
 			if ( $rsvp_status == 'yes' ) {
+				$rsvp_class = 'rsvp-yes';
 				$message = _x( 'You indicated you will be attending this event.', 'event-tickets' );
 			} else {
+				$rsvp_class = 'rsvp-no';
 				$message = _x( 'You indicated you will not be attending this event.', 'event-tickets' );
 			}
 	?>
 	
-		<?php echo $message; ?> <a href="#"><?php echo _x( 'Change', 'event-tickets' ) ?></a>
-	
+		<span class="<?php echo $rsvp_class; ?>">
+			<?php echo $message; ?> <a href="#"><?php echo _x( 'Change', 'event-tickets' ) ?></a>
+		</span>
+		
 	<?php else: ?>
 	
-		<?php echo _x( 'Are you attending?', 'event-tickets' ); ?> <a href="#"><?php echo _x( 'RSVP Now', 'event-tickets' ) ?></a>
-	
+		<span class="not-rsvpd">
+			<?php echo _x( 'Are you attending?', 'event-tickets' ); ?> <a href="#"><?php echo _x( 'RSVP Now', 'event-tickets' ) ?></a>
+		</span>
+		
 	<?php endif; ?>
 		
 	</div>
