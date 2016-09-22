@@ -83,14 +83,22 @@ if ( $must_login ):
 				</td>
 			</tr>
 
-			<?php if ( $rsvp_question ): ?>
-			<tr class="tribe-ticket-rsvp-custom-question">
-				<td>
-					<p><?php echo $rsvp_question; ?></p>
-					<textarea name="custom_question" rows="3"><?php echo esc_html($rsvp_answer); ?></textarea>
-				</td>
-			</tr>
 			<?php
+				if ( $rsvp_questions ):
+					foreach ( $rsvp_questions as $id => $question ):
+						$answer = isset($rsvp_answers[$id]) ? $rsvp_answers[$id] : '';
+			?>
+			
+				<tr class="tribe-ticket-rsvp-custom-question">
+					<td>
+						<p><?php echo $question; ?></p>
+						<input type="hidden" name="custom_question_id[]" value="<?php echo $id; ?>" />
+						<textarea name="custom_question[]" rows="3"><?php echo esc_html($answer); ?></textarea>
+					</td>
+				</tr>
+			
+			<?php
+					endforeach;
 				endif;
 
 			/**

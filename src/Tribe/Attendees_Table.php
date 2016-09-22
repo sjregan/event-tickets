@@ -87,6 +87,7 @@ class Tribe__Tickets__Attendees_Table extends WP_List_Table {
 			//'check_in'  => esc_html__( 'Check in', 'event-tickets' ),
 		);
 
+		/*
 		$event_id = !empty($_GET['event_id']) ? intval($_GET['event_id']) : false;
 		
 		if ($event_id) {
@@ -100,6 +101,7 @@ class Tribe__Tickets__Attendees_Table extends WP_List_Table {
 				$columns['custom'] = esc_html($question);
 			}
 		}
+		*/
 		
 		return $columns;
 	}

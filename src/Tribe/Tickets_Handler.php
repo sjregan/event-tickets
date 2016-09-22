@@ -375,12 +375,18 @@ class Tribe__Tickets__Tickets_Handler {
 		$export_columns = array_diff_key( $columns, $hidden );
 
 		// Add additional expected columns
-		$export_columns['order_id']           = esc_html_x( 'Order ID', 'attendee export', 'event-tickets' );
-		$export_columns['order_status_label'] = esc_html_x( 'Order Status', 'attendee export', 'event-tickets' );
-		$export_columns['attendee_id']        = esc_html_x( 'Ticket #', 'attendee export', 'event-tickets' );
-		$export_columns['purchaser_name']     = esc_html_x( 'Customer Name', 'attendee export', 'event-tickets' );
-		$export_columns['purchaser_email']    = esc_html_x( 'Customer Email Address', 'attendee export', 'event-tickets' );
+		//$export_columns['order_id']           = esc_html_x( 'Order ID', 'attendee export', 'event-tickets' );
+		//$export_columns['order_status_label'] = esc_html_x( 'Order Status', 'attendee export', 'event-tickets' );
+		//$export_columns['attendee_id']        = esc_html_x( 'Ticket #', 'attendee export', 'event-tickets' );
+		//$export_columns['purchaser_name']     = esc_html_x( 'Customer Name', 'attendee export', 'event-tickets' );
+		//$export_columns['purchaser_email']    = esc_html_x( 'Customer Email Address', 'attendee export', 'event-tickets' );
 
+		$rsvp_questions = get_post_meta( $event_id, Tribe__Tickets__RSVP::QUESTION_KEY, true);
+		
+		foreach ( $rsvp_questions as $id => $question ) {
+			$export_columns['custom_'.$id] = $question;
+		}
+		
 		/**
 		 * Used to modify what columns should be shown on the CSV export
 		 * The column name should be the Array Index and the Header is the array Value
@@ -391,6 +397,7 @@ class Tribe__Tickets__Tickets_Handler {
 		 */
 		$export_columns = apply_filters( 'tribe_events_tickets_attendees_csv_export_columns', $export_columns, $items, $event_id );
 
+		
 		// Add the export column headers as the first row
 		$rows = array(
 			array_values( $export_columns ),
@@ -720,7 +727,17 @@ class Tribe__Tickets__Tickets_Handler {
 		if ( empty( $_POST['tribe_ticket_rsvp_question'] ) ) {
 			delete_post_meta( $post_id, $this->rsvp_question_field );
 		} else {
-			update_post_meta( $post_id, $this->rsvp_question_field, $_POST['tribe_ticket_rsvp_question'] );
+			$questions = [];
+			
+			foreach ( $_POST['tribe_ticket_rsvp_question'] as $key => $q ) {
+				$id = isset( $_POST['tribe_ticket_rsvp_question_id'][$key] ) ? $_POST['tribe_ticket_rsvp_question_id'][$key] : null;
+				
+				if ( $id && !empty( $q )) {
+					$questions[$id] = filter_var( $q, FILTER_SANITIZE_STRING );
+				}
+			}
+			
+			update_post_meta( $post_id, $this->rsvp_question_field, $questions );
 		}
 
 		return;

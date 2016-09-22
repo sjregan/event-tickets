@@ -102,6 +102,20 @@ p.ticket_name {
 	padding-bottom: 0.5em !important;
 }
 
+.tribe-tickets-rsvp-question .num {
+	width: 20px;
+}
+
+.tribe-tickets-rsvp-question INPUT {
+	width: 95%;
+}
+
+.tribe-tickets-simple-rsvp-question .heading {
+	font-weight: bold;
+	padding-bottom: 0;
+	margin-bottom: 0 !important;
+}
+
 /* Specific goal of this rule is to prevent the number input busting the ticket form layout under Twenty Fifteen */
 
 .tribe-theme-twentyfifteen .tribe-events-tickets input[type='number'] {
