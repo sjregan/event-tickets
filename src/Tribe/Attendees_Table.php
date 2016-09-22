@@ -524,6 +524,8 @@ class Tribe__Tickets__Attendees_Table extends WP_List_Table {
 				break;
 		}
 
+		/* SJ: disabled as we are already rendering by this point
+		 * 
 		// With the bulk/individual action handled, let's redirect back to the attendee list
 		// to avoid resubmissions etc
 		$attendee_list_url = add_query_arg( array(
@@ -535,6 +537,8 @@ class Tribe__Tickets__Attendees_Table extends WP_List_Table {
 
 		wp_safe_redirect( $attendee_list_url );
 		exit();
+		 * 
+		 */
 	}
 
 	/**
