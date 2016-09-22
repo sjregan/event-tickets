@@ -463,7 +463,17 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 			update_post_meta( $attendee_id, $this->email, $attendee_email );
 			
 			if ( $order_status == 'yes' ) {
-				update_post_meta( $attendee_id, self::QUESTION_KEY, $custom_answer );
+				$answers = [];
+				
+				foreach ( $custom_answers as $key => $answer ) {
+					$question_id = !empty( $custom_answer_ids[$key] ) ? filter_var($custom_answer_ids[$key], FILTER_SANITIZE_NUMBER_INT) : null;
+					
+					if ( $question_id && !empty( $answer )) {
+						$answers[$question_id] = filter_var($answer, FILTER_SANITIZE_STRING);
+					}
+				}
+				
+				update_post_meta( $attendee_id, self::QUESTION_KEY, $answers );
 			}
 
 			$this->record_attendee_user_id( $attendee_id );
@@ -482,16 +492,14 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 				$answers = [];
 				
 				foreach ( $custom_answers as $key => $answer ) {
-					$question_id = !empty( $custom_answer_ids[$key] ) ? $custom_answer_ids[$key] : null;
+					$question_id = !empty( $custom_answer_ids[$key] ) ? filter_var($custom_answer_ids[$key], FILTER_SANITIZE_NUMBER_INT) : null;
 					
 					if ( $question_id && !empty( $answer )) {
-						$answers[$question_id] = $answer;
+						$answers[$question_id] = filter_var($answer, FILTER_SANITIZE_STRING);
 					}
 				}
 				
 				update_post_meta( $attendee->ID, self::QUESTION_KEY, $answers );
-			} else {
-				delete_post_meta( $attendee->ID, self::QUESTION_KEY );
 			}
 		}
 
