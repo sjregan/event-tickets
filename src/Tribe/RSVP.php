@@ -14,14 +14,14 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 	 * @var string
 	 */
 	const ENABLED_KEY = '_tribe_enable_rsvp';
-	
+
 	/**
 	 * Meta key for whether RSVPing is enabled
 	 *
 	 * @var string
 	 */
 	const QUESTION_KEY = '_tribe_rsvp_question';
-	
+
 	/**
 	 * Meta key that relates Attendees and Events.
 	 *
@@ -432,15 +432,15 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 		do_action( 'tribe_tickets_rsvp_before_order_processing', $_POST );
 
 		$order_id = md5( time() . rand() );
-		
+
 		$attendee_email = $current_user->user_email;
 		$attendee_full_name = $current_user->display_name;
 		$order_status = $_POST['attending'] == 'yes' ? 'yes' : 'no';
 		$custom_answer_ids = !empty($_POST['custom_question_id']) ? $_POST['custom_question_id'] : array();
 		$custom_answers = !empty($_POST['custom_question']) ? $_POST['custom_question'] : '';
-		
+
 		$attendee = $this->get_user_rsvp( get_current_user_id(), $event_id );
-		
+
 		if ( $attendee === false ) {
 			// Create new RSVP
 			$attendee = array(
@@ -461,51 +461,51 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 			update_post_meta( $attendee_id, $this->order_key, $order_id );
 			update_post_meta( $attendee_id, $this->full_name, $attendee_full_name );
 			update_post_meta( $attendee_id, $this->email, $attendee_email );
-			
+
 			if ( $order_status == 'yes' ) {
 				$answers = [];
-				
+
 				foreach ( $custom_answers as $key => $answer ) {
 					$question_id = !empty( $custom_answer_ids[$key] ) ? filter_var($custom_answer_ids[$key], FILTER_SANITIZE_NUMBER_INT) : null;
-					
+
 					if ( $question_id && !empty( $answer )) {
 						$answers[$question_id] = filter_var($answer, FILTER_SANITIZE_STRING);
 					}
 				}
-				
+
 				update_post_meta( $attendee_id, self::QUESTION_KEY, $answers );
 			}
 
 			$this->record_attendee_user_id( $attendee_id );
 		} else {
 			$time = current_time('mysql');
-			
+
 			wp_update_post(array(
 				'ID'			=> $attendee->ID,
 				'post_date'     => $time,
 				'post_date_gmt' => get_gmt_from_date( $time )
 			));
-			
+
 			update_post_meta( $attendee->ID, self::ATTENDEE_RSVP_KEY, $order_status );
-			
+
 			if ( $order_status == 'yes' ) {
 				$answers = [];
-				
+
 				foreach ( $custom_answers as $key => $answer ) {
 					$question_id = !empty( $custom_answer_ids[$key] ) ? filter_var($custom_answer_ids[$key], FILTER_SANITIZE_NUMBER_INT) : null;
-					
+
 					if ( $question_id && !empty( $answer )) {
 						$answers[$question_id] = filter_var($answer, FILTER_SANITIZE_STRING);
 					}
 				}
-				
+
 				update_post_meta( $attendee->ID, self::QUESTION_KEY, $answers );
 			}
 		}
 
 		// After Adding the Values we Update the Transient
 		Tribe__Post_Transient::instance()->delete( $event_id, Tribe__Tickets__Tickets::ATTENDEES_CACHE );
-			
+
 		// Redirect to the same page to prevent double purchase on refresh
 		if ( ! empty( $event_id ) ) {
 			$url = get_permalink( $event_id );
@@ -517,7 +517,7 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 
 	/**
 	 * Get rsvp for a user
-	 * 
+	 *
 	 * @param int $user_id
 	 * @param int $event_id
 	 * @return WP_User|boolean
@@ -539,14 +539,14 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 				)
 			),
 		) );
-		
+
 		if ( !empty( $query->posts[0] ) ) {
 			return $query->posts[0];
 		}
-		
+
 		return false;
 	}
-	
+
 	public function send_tickets_email( $order_id ) {
 		$all_attendees = $this->get_attendees_by_transaction( $order_id );
 		$to_send = array();
@@ -859,7 +859,7 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 
 		$rsvp_enabled = get_post_meta( $post->ID, self::ENABLED_KEY, true);
 		$rsvp_questions = get_post_meta( $post->ID, self::QUESTION_KEY, true);
-		
+
 		if (!$rsvp_enabled) {
 			return;
 		}
@@ -872,7 +872,7 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 			$this->add_message( __( 'Thanks for your RSVP!', 'event-tickets' ), 'success' );
 		}
 		*/
-		
+
 		if ( $rsvp_error ) {
 			switch ( $rsvp_error ) {
 				case 2:
@@ -889,12 +889,12 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 		$attendee = $this->get_user_rsvp( get_current_user_id(), $post->ID );
 		$rsvp_status = '';
 		$rsvp_answers = [];
-		
+
 		if ( $attendee ) {
 			$rsvp_status = get_post_meta( $attendee->ID, self::ATTENDEE_RSVP_KEY, true );
 			$rsvp_answers = get_post_meta( $attendee->ID, self::QUESTION_KEY, true);
 		}
-		
+
 		$must_login = ! is_user_logged_in() && $this->login_required();
 		include $this->getTemplateHierarchy( 'tickets/simple-rsvp' );
 
@@ -1020,7 +1020,7 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 			$user_email      = get_post_meta( $attendee->ID, $this->email, true );
 			$user_full_name  = get_post_meta( $attendee->ID, $this->full_name, true );
 			$question_answers = get_post_meta( $attendee->ID, self::QUESTION_KEY, true);
-			
+
 			$attendee_data = array_merge(
 				$this->get_order_data( $attendee->ID ),
 				array(
@@ -1031,9 +1031,11 @@ class Tribe__Tickets__RSVP extends Tribe__Tickets__Tickets {
 					'user_full_name'	=> $user_full_name,
 				)
 			);
-			
-			foreach ( $question_answers as $id => $answer ) {
-				$attendee_data['custom_'.$id] = $answer;
+
+			if ( $question_answers ) {
+				foreach ( $question_answers as $id => $answer ) {
+					$attendee_data['custom_'.$id] = $answer;
+				}
 			}
 
 			/**
